@@ -1,11 +1,22 @@
 package com.logicaalternativa.monadtransformerandmore.business.impl;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Executors;
+
+import scala.Tuple2;
+import scala.concurrent.ExecutionContextExecutor;
 import scala.concurrent.Future;
 import scala.concurrent.Promise;
 import scala.util.Either;
+import scala.util.Right;
 import akka.dispatch.ExecutionContexts;
 import akka.dispatch.Futures;
 
+import com.logicaalternativa.monadtransformerandmore.bean.Author;
+import com.logicaalternativa.monadtransformerandmore.bean.Book;
+import com.logicaalternativa.monadtransformerandmore.bean.Chapter;
+import com.logicaalternativa.monadtransformerandmore.bean.Sales;
 import com.logicaalternativa.monadtransformerandmore.bean.Summary;
 import com.logicaalternativa.monadtransformerandmore.business.SrvSummaryFutureEither;
 import com.logicaalternativa.monadtransformerandmore.errors.Error;
@@ -45,7 +56,42 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 	@Override
 	public Future<Either<Error, Summary>> getSummary(Integer idBook) {
 		
-		return $_notYetImpl();
+		Future<Either<Error, Book>> bookFut = srvBook.getBook( idBook );
+		
+		Future<Either<Error, Sales>> salesFut = srvSales.getSales(idBook);
+		
+		Future<Tuple2<Either<Error, Book>, Either<Error, Sales>>> zip = bookFut.zip( salesFut );
+		
+		ExecutionContextExecutor ec = ExecutionContexts.global();
+		
+		Future<Either<Error, Summary>> res = zip.map(
+				
+				mapperF(   
+					$_notYetImpl()	
+						
+				),ec);
+		
+		
+		
+//		Future<Either<Error, Summary>> res = bookFut.map(
+//				mapperF(
+//						eBook -> {
+//							 
+//							Book book = eBook.right().get();
+//							List<Chapter> chapter = null;
+//							Optional<Sales> sales = null;
+//							Author author= null;
+//							Summary summary = new Summary(book, chapter, sales, author);
+//							
+//							return new Right<>(summary);
+//							 
+//						 }
+//						
+//						)
+//				, global);		
+		
+		
+		return res;
 	}
 
 }
