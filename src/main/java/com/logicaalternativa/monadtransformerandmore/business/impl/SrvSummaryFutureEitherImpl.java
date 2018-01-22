@@ -39,6 +39,7 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 	
 	private final MonadFutEither<Error> m;
 	
+	final ExecutionContextExecutor ec = ExecutionContexts.global();
 	
 	public SrvSummaryFutureEitherImpl(ServiceBookFutEither<Error> srvBook,
 			ServiceSalesFutEither<Error> srvSales,
@@ -60,36 +61,57 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 		
 		Future<Either<Error, Sales>> salesFut = srvSales.getSales(idBook);
 		
-		Future<Tuple2<Either<Error, Book>, Either<Error, Sales>>> zip = bookFut.zip( salesFut );
+//		bookFut.flatMap(
+//				
+//				mapperF( bookE -> salesFut )				
+//				
+//				,ec);
+//		
+//			bookFut.flatMap(
+//				
+//				mapperF( bookE -> srvSales.getSales(idBook) )				
+//				
+//				,ec);		
 		
-		ExecutionContextExecutor ec = ExecutionContexts.global();
 		
-		Future<Either<Error, Summary>> res = zip.map(
+		final Future<Tuple2<Either<Error, Book>, Either<Error, Sales>>> zip = bookFut.zip( salesFut );
+		
+		
+		final Future<Either<Error, Summary>> res = zip.flatMap(
 				
-				mapperF(   
-					$_notYetImpl()	
+				mapperF(
+						tuple -> {
+					
+						Either<Error, Book> bookE = tuple._1();
+						Either<Error, Sales> salesE = tuple._2();
 						
-				),ec);
-		
-		
-		
-//		Future<Either<Error, Summary>> res = bookFut.map(
-//				mapperF(
-//						eBook -> {
-//							 
-//							Book book = eBook.right().get();
-//							List<Chapter> chapter = null;
-//							Optional<Sales> sales = null;
-//							Author author= null;
-//							Summary summary = new Summary(book, chapter, sales, author);
-//							
-//							return new Right<>(summary);
-//							 
-//						 }
-//						
-//						)
-//				, global);		
-		
+						final Book book = bookE.right().get();
+						final Sales sales = salesE.right().get();
+						
+						String idAuthor = book.getIdAuthor();						
+						
+						Future<Either<Error, Summary>> summaryF = srvAuthor.getAuthor(idAuthor).map(								
+								mapperF( 
+										authorE -> {
+											
+											final Author author = authorE.right().get();
+											
+											List<Chapter> chapter = null;
+											Summary summary = new Summary(book, chapter , Optional.of(sales), author);											
+											
+											return new Right<>(summary);
+											
+										}  							
+										
+								),
+								ec );					
+						
+						
+						return summaryF;
+					}
+				
+				)
+				,ec);		
 		
 		return res;
 	}
