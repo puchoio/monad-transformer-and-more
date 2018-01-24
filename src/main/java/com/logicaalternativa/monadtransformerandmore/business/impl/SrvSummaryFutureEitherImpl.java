@@ -102,7 +102,8 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 										
 										final List<Chapter> chapterL = StreamSupport
 												.stream(listChapertE.spliterator(), true)
-												.map(regChapertE -> regChapertE.right().get()  )
+												.parallel()
+												.map( regChapertE -> regChapertE.right().get()  )
 												.collect( Collectors.toList() );
 										
 										final Summary summary = new Summary(book, chapterL , Optional.of(sales), author);											
