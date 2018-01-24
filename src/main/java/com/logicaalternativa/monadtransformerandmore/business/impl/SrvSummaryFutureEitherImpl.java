@@ -1,10 +1,14 @@
 package com.logicaalternativa.monadtransformerandmore.business.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import scala.Tuple2;
+import scala.collection.immutable.Stream.StreamBuilder;
 import scala.concurrent.ExecutionContextExecutor;
 import scala.concurrent.Future;
 import scala.concurrent.Promise;
@@ -57,60 +61,61 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 	@Override
 	public Future<Either<Error, Summary>> getSummary(Integer idBook) {
 		
-		Future<Either<Error, Book>> bookFut = srvBook.getBook( idBook );
+		final Future<Either<Error, Book>> bookFut = srvBook.getBook( idBook );
 		
-		Future<Either<Error, Sales>> salesFut = srvSales.getSales(idBook);
-		
-//		bookFut.flatMap(
-//				
-//				mapperF( bookE -> salesFut )				
-//				
-//				,ec);
-//		
-//			bookFut.flatMap(
-//				
-//				mapperF( bookE -> srvSales.getSales(idBook) )				
-//				
-//				,ec);		
-		
+		final Future<Either<Error, Sales>> salesFut = srvSales.getSales(idBook);
 		
 		final Future<Tuple2<Either<Error, Book>, Either<Error, Sales>>> zip = bookFut.zip( salesFut );
 		
-		
 		final Future<Either<Error, Summary>> res = zip.flatMap(
 				
-				mapperF(
-						tuple -> {
+				tuple -> {
 					
-						Either<Error, Book> bookE = tuple._1();
-						Either<Error, Sales> salesE = tuple._2();
+						final Either<Error, Book> bookE = tuple._1();
+						final Either<Error, Sales> salesE = tuple._2();
 						
 						final Book book = bookE.right().get();
 						final Sales sales = salesE.right().get();
 						
-						String idAuthor = book.getIdAuthor();						
+						final String idAuthor = book.getIdAuthor();
 						
-						Future<Either<Error, Summary>> summaryF = srvAuthor.getAuthor(idAuthor).map(								
-								mapperF( 
-										authorE -> {
+						final Future<Either<Error, Author>> authorF = srvAuthor.getAuthor(idAuthor);
+						final List<Long> chapters = book.getChapters();
+						
+						final List<Future<Either<Error, Chapter>>> futChapterList = chapters
+							.stream()
+							.parallel()
+							.map( idChapter  -> srvChapter.getChapter( idChapter ) )
+							.collect( Collectors.toList() )
+							;						
+						
+						final Future<Iterable<Either<Error, Chapter>>> listFutChapter = Futures.sequence( futChapterList, ec );					
 											
-											final Author author = authorE.right().get();
-											
-											List<Chapter> chapter = null;
-											Summary summary = new Summary(book, chapter , Optional.of(sales), author);											
-											
-											return new Right<>(summary);
-											
-										}  							
+						
+						final Future<Either<Error, Summary>> summaryF = authorF.flatMap(								
+								 
+							authorE -> listFutChapter.map(
 										
-								),
-								ec );					
-						
+									listChapertE -> {
+										
+										final Author author = authorE.right().get();
+										
+										final List<Chapter> chapterL = StreamSupport
+												.stream(listChapertE.spliterator(), true)
+												.map(regChapertE -> regChapertE.right().get()  )
+												.collect( Collectors.toList() );
+										
+										final Summary summary = new Summary(book, chapterL , Optional.of(sales), author);											
+										
+										return new Right<>(summary);
+										
+									}
+									,ec),
+								ec );
 						
 						return summaryF;
 					}
 				
-				)
 				,ec);		
 		
 		return res;
