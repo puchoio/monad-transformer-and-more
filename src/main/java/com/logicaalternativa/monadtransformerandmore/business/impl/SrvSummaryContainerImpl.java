@@ -2,6 +2,14 @@ package com.logicaalternativa.monadtransformerandmore.business.impl;
 
 import static com.logicaalternativa.monadtransformerandmore.util.TDD.$_notYetImpl;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import com.logicaalternativa.monadtransformerandmore.bean.Author;
+import com.logicaalternativa.monadtransformerandmore.bean.Book;
+import com.logicaalternativa.monadtransformerandmore.bean.Chapter;
+import com.logicaalternativa.monadtransformerandmore.bean.Sales;
 import com.logicaalternativa.monadtransformerandmore.bean.Summary;
 import com.logicaalternativa.monadtransformerandmore.business.SrvSummaryContainer;
 import com.logicaalternativa.monadtransformerandmore.container.Container;
@@ -39,7 +47,30 @@ public class SrvSummaryContainerImpl implements SrvSummaryContainer<Error> {
 	@Override
 	public Container<Error, Summary> getSummary(Integer idBook) {
 		
-		return $_notYetImpl();
+		Book book = srvBook.getBook(idBook).getValue();
+		
+		Sales sales = srvSales.getSales(idBook).getValue();
+		
+	    Author author = srvAuthor.getAuthor(book.getIdAuthor()).getValue();
+	    
+	    List<Long> chapters2 = book.getChapters();
+	    
+		final List<Chapter> chapters = chapters2
+	     .stream()
+	     .parallel()
+	     .map(  idChapter -> {
+	    	 
+	    	 Container<Error, Chapter> chapter = srvChapter.getChapter(idChapter);
+	    	 return chapter.getValue();
+	    	 
+	     })
+	     .collect(Collectors.toList())
+	     ;	    
+	    
+	     Summary summary = new Summary(book, chapters, Optional.of(sales), author);
+	     
+	    
+	    return Container.value(summary); 
 		
 	}
 
