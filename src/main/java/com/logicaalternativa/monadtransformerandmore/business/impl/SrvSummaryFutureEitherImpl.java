@@ -75,7 +75,10 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 						final Either<Error, Sales> salesE = tuple._2();
 						
 						final Book book = bookE.right().get();
-						final Sales sales = salesE.right().get();
+						
+						final Optional<Sales> salesO =  salesE.isRight() 
+								                         ? Optional.of(salesE.right().get())
+								                        		 : Optional.empty();
 						
 						final String idAuthor = book.getIdAuthor();
 						
@@ -106,7 +109,7 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 												.map( regChapertE -> regChapertE.right().get()  )
 												.collect( Collectors.toList() );
 										
-										final Summary summary = new Summary(book, chapterL , Optional.of(sales), author);											
+										final Summary summary = new Summary(book, chapterL , salesO, author);											
 										
 										return new Right<>(summary);
 										
