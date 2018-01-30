@@ -12,6 +12,8 @@ public class ServiceAuthorContainerMock implements ServiceAuthorContainer<Error>
 	@Override
 	public Container<Error, Author> getAuthor(String id) {
 		
+		System.out.println( id );
+		
 		if ( "author-book-2".equals( id )  ){
 			
 			return Container.error( new MyError( "Author not found " + id ));

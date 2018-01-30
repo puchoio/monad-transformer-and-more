@@ -7,8 +7,11 @@ import java.util.function.Function;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.util.Either;
-import com.logicaalternativa.monadtransformerandmore.errors.Error;
+import scala.util.Left;
+import scala.util.Right;
+import akka.dispatch.Futures;
 
+import com.logicaalternativa.monadtransformerandmore.errors.Error;
 import com.logicaalternativa.monadtransformerandmore.monad.MonadFutEither;
 
 public class MonadFutEitherError implements MonadFutEither<Error> {
@@ -24,7 +27,7 @@ public class MonadFutEitherError implements MonadFutEither<Error> {
 	@Override
 	public <T> Future<Either<Error, T>> pure(T value) {
 		
-		return $_notYetImpl();
+		return Futures.successful(new Right<>(value));
 	}
 
 	@Override
@@ -38,7 +41,7 @@ public class MonadFutEitherError implements MonadFutEither<Error> {
 	@Override
 	public <T> Future<Either<Error, T>> raiseError(Error error) {
 		
-		return $_notYetImpl();
+		return Futures.successful(new Left<>( error ));
 	}
 
 	@Override
