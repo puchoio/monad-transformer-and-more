@@ -29,7 +29,7 @@ public interface MonadContainer<E> {
 
 	default <A,T> Container<E, T> map( Container<E, A> from, Function<A, T> f ) {
 
-		return $_notYetImpl();
+		return flatMap( from, s ->  pure( f.apply(s ) ) );
 
 	}
 

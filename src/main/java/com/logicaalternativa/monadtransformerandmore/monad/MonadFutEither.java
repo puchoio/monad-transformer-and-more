@@ -27,24 +27,23 @@ public interface MonadFutEither<E> {
 	<T> Future<Either<E,T>> recoverWith( Future<Either<E, T>> from, Function<E, Future<Either<E,T>>> f );
 
 	/**
-	 * Deriveds
+	 * Derived
 	 */
 
 	default <A,T> Future<Either<E,T>> map( Future<Either<E, A>> from, Function<A, T> f ) {
 
-		return $_notYetImpl();
+		return flatMap( from, s ->  pure( f.apply(s ) ) );
 
 	}
 
 	default <T> Future<Either<E,T>> recover( Future<Either<E,T>> from, Function<E, T> f ) {
 
-		return $_notYetImpl();
-
+		return recoverWith(from, error -> pure( f.apply (error) ) );
 	}
 	
 	default <T> Future<Either<E,T>> flatten( Future<Either<E,Future<Either<E,T>>>> from ) {
 
-		return $_notYetImpl();
+		return flatMap(from,  s  -> s  );
 
 	}
 
