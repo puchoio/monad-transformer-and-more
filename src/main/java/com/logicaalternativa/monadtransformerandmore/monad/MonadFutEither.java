@@ -43,7 +43,7 @@ public interface MonadFutEither<E> {
 	
 	default <T> Future<Either<E,T>> flatten( Future<Either<E,Future<Either<E,T>>>> from ) {
 
-		return flatMap(from,  s  -> s  );
+		return flatMap( from,  s -> s  );
 
 	}
 

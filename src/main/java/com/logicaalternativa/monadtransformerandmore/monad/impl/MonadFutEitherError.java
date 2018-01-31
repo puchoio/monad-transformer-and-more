@@ -14,7 +14,7 @@ import akka.dispatch.Futures;
 import com.logicaalternativa.monadtransformerandmore.errors.Error;
 import com.logicaalternativa.monadtransformerandmore.errors.impl.MyError;
 import com.logicaalternativa.monadtransformerandmore.monad.MonadFutEither;
-import com.logicaalternativa.monadtransformerandmore.util.Java8;
+import static com.logicaalternativa.monadtransformerandmore.util.Java8.recoverF;
 
 public class MonadFutEitherError implements MonadFutEither<Error> {
 	
@@ -42,34 +42,27 @@ public class MonadFutEitherError implements MonadFutEither<Error> {
 		// =>
 		// FutureEither<Error,  B>
 		
-		Future<Either<Error, A>> recoverWith = recover(from);
-		
+		final Future<Either<Error, A>> recoverWith = recover( from );
 		
 		return recoverWith.flatMap(
-				 
+				
 				 ( aEither ) -> {
 					
 					if ( aEither.isLeft() ) {
 						
-						Future<Either<Error, T>> res = raiseError(new MyError( aEither.left().get().getDescription() ));
-						
-						return res;
+						final Error error = aEither.left().get();
+						return raiseError(  error );
 						
 					} else {
 						
-						A  val = aEither.right().get();
-						
-						return f.apply(val);
-						
-						// return $_notYetImpl();
+						final A  value = aEither.right().get();
+						return f.apply( value );
 						
 					}
 					
-				}			
-				,				
+				},				
 				ec);
 		
-		// return $_notYetImpl();
 	}
 	@Override
 	public <T> Future<Either<Error, T>> raiseError(Error error) {
@@ -83,8 +76,7 @@ public class MonadFutEitherError implements MonadFutEither<Error> {
 			Function<Error, Future<Either<Error, T>>> f) {
 		
 		
-		Future<Either<Error, T>> recover = recover(from);
-		
+		Future<Either<Error, T>> recover = recover( from );
 		
 		return recover.flatMap(
 				 
@@ -92,36 +84,30 @@ public class MonadFutEitherError implements MonadFutEither<Error> {
 					
 					if ( aEither.isRight()) {
 						
-						Future<Either<Error, T>> res = pure( aEither.right().get() );
-						
-						return res;
+						final T value = aEither.right().get();
+						return pure( value );
 						
 					} else {
 						
-						Error  error = aEither.left().get();
-						
-						return f.apply(error);
-						
-						// return $_notYetImpl();
+						final Error  error = aEither.left().get();
+						return f.apply( error );
 						
 					}
 					
-				}			
-				,				
+				},				
 				ec);
 		
-		// return $_notYetImpl();
 	}
 	
 
 
 	private <A> Future<Either<Error, A>> recover(Future<Either<Error, A>> from) {
-		Future<Either<Error, A>> recoverWith = from
-				.recoverWith(Java8.recoverF(
-				
-				t -> raiseError(new MyError( t.getMessage()))
-				
-		 ),ec);
+		
+		final Future<Either<Error, A>> recoverWith = from.recoverWith(
+				recoverF(
+						t -> raiseError( new MyError( t.getMessage()))				
+			    ),ec);
+		
 		return recoverWith;
 	}
 
