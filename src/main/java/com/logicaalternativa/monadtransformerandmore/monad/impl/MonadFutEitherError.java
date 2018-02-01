@@ -36,11 +36,7 @@ public class MonadFutEitherError implements MonadFutEither<Error> {
 	public <A, T> Future<Either<Error, T>> flatMap(
 			Future<Either<Error, A>> from,
 			Function<A, Future<Either<Error, T>>> f) {
-
-		// FutureEither<Error, A> from
-		// A => FutureEither<Error,  B> 
-		// =>
-		// FutureEither<Error,  B>
+		
 		
 		final Future<Either<Error, A>> recoverWith = recover( from );
 		
@@ -73,8 +69,7 @@ public class MonadFutEitherError implements MonadFutEither<Error> {
 	@Override
 	public <T> Future<Either<Error, T>> recoverWith(
 			Future<Either<Error, T>> from,
-			Function<Error, Future<Either<Error, T>>> f) {
-		
+			Function<Error, Future<Either<Error, T>>> f) {		
 		
 		Future<Either<Error, T>> recover = recover( from );
 		

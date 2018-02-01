@@ -50,8 +50,15 @@ public interface MonadFutEither<E> {
 	default <A,B,T> Future<Either<E,T>> flatMap2( Future<Either<E, A>> fromA, 
 			Future<Either<E, B>> fromB, 
 			BiFunction<A,B,Future<Either<E,T>>> f  ) {
-
-		return $_notYetImpl();
+		
+		
+		final Future<Either<E, T>> res = flatMap(fromA, 
+				 a -> flatMap(
+						 fromB, 
+						 	b -> f.apply(a, b)
+						 )				
+				);	
+		return res;
 
 	}
 
@@ -60,8 +67,22 @@ public interface MonadFutEither<E> {
 	default <A,B,T> Future<Either<E,T>> map2( Future<Either<E, A>> fromA, 
 			Future<Either<E, B>> fromB, 
 			BiFunction<A,B,T> f  ) {
+		
+		/*
+		 *  
+		 *  for{
+		 * 		a <- fromA
+		 * 		b <- fromB 
+		 *  } yield( f( a, b )  )
+		 * 
+		 * 
+		 * */
 
-		return $_notYetImpl();
+		return flatMap2(
+						fromA, 
+						fromB, 
+						(a, b) -> pure( f.apply( a, b ) )
+					);
 
 	}
 

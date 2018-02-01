@@ -62,118 +62,20 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 
 	@Override
 	public Future<Either<Error, Summary>> getSummary(Integer idBook) {
+		
+		return m.flatMap2(
+				srvBook.getBook(idBook), 
+				srvSales.getSales(idBook),				
+				( book, sales ) -> $_notYetImpl() 
+				);
+		
+		
+		// return $_notYetImpl();
 
-		final ExecutionContextExecutor ec = ExecutionContexts.global();
 		
-		final Future<Either<Error, Book>> bookFut = srvBook.getBook( idBook );
-		
-		final Future<Either<Error, Sales>> salesFut = srvSales.getSales(idBook);
-		
-		final Future<Tuple2<Either<Error, Book>, Either<Error, Sales>>> zip = bookFut.zip( salesFut );
-		
-		final Future<Either<Error, Summary>> res = zip.flatMap(
-				
-				tuple -> {
-					
-						
-						return createFutureSummary(ec, tuple);
-					}
-				
-				,ec);		
-		
-		return res;
 	}
 	
 	
 
-	private Future<Either<Error, Summary>> createFutureSummary(
-			final ExecutionContextExecutor ec,
-			Tuple2<Either<Error, Book>, Either<Error, Sales>> tuple) {
-		
-		
-		final Either<Error, Book> bookE = tuple._1();
-		
-		if( bookE.isLeft() ) {
-			
-			return returnGenericError();
-			
-		}
-		
-		final Either<Error, Sales> salesE = tuple._2();
-		
-		final Book book = bookE.right().get();
-		
-		final Optional<Sales> salesO =  salesE.isRight() 
-				                         ? Optional.of(salesE.right().get())
-				                        		 : Optional.empty();
-		
-		final String idAuthor = book.getIdAuthor();
-		
-		final Future<Either<Error, Author>> authorF = srvAuthor.getAuthor(idAuthor);
-		
-		final List<Long> chapters = book.getChapters();
-		
-		final List<Future<Either<Error, Chapter>>> futChapterList = chapters
-			.stream()
-			.parallel()
-			.map( idChapter  -> srvChapter.getChapter( idChapter ) )
-			.collect( Collectors.toList() )
-			;						
-		
-		final Future<Iterable<Either<Error, Chapter>>> listFutChapter = Futures.sequence( futChapterList, ec );					
-							
-		
-		final Future<Either<Error, Summary>> summaryF = authorF.flatMap(								
-				 
-			authorE ->   {
-								if ( authorE.isLeft() ) {
-									
-									return returnGenericError();									
-								}						
-														
-								return listFutChapter.map(	
-										listChapertE ->  createSummary(book, salesO, authorE, listChapertE) ,ec
-								); 
-						}, 
-				ec );
-		
-		return summaryF;
-	}
-
-	private Future<Either<Error, Summary>> returnGenericError() {
-		return Futures.successful( LEFTERROR );
-	}
-
-	private Either<Error, Summary> createSummary(final Book book,
-			final Optional<Sales> salesO, Either<Error, Author> authorE,
-			Iterable<Either<Error, Chapter>> listChapertE) {
-		
-		
-		final Author author = authorE.right().get();
-		final boolean res = StreamSupport
-				.stream( listChapertE.spliterator(), true)
-				.parallel()
-				.map( regChapertE -> regChapertE.isRight() )
-				.reduce( ( one, other ) -> one && other )
-				.get()				
-				;
-		
-		if ( !res ) {
-			
-			return LEFTERROR;
-			
-		}
-				
-		
-		final List<Chapter> chapterL = StreamSupport
-				.stream(listChapertE.spliterator(), true)
-				.parallel()
-				.map( regChapertE -> regChapertE.right().get()  )
-				.collect( Collectors.toList() );
-		
-		final Summary summary = new Summary(book, chapterL , salesO, author);											
-		
-		return new Right<>(summary);
-	}
-
+	
 }
