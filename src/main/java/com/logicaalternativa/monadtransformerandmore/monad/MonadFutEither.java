@@ -2,6 +2,8 @@ package com.logicaalternativa.monadtransformerandmore.monad;
 
 import static com.logicaalternativa.monadtransformerandmore.util.TDD.$_notYetImpl;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -72,18 +74,19 @@ public interface MonadFutEither<E> {
 		 *  
 		 *  for{
 		 * 		a <- fromA
-		 * 		b <- fromB 
+		 * 		b <- fromB
 		 *  } yield( f( a, b )  )
 		 * 
 		 * 
 		 * */
-
-		return flatMap2(
-						fromA, 
-						fromB, 
-						(a, b) -> pure( f.apply( a, b ) )
-					);
-
+		
+		return flatMap(
+				fromA,
+					a -> map( 
+						 fromB,
+						   b ->  f.apply( a, b )  
+					)
+				 );
 	}
 
 
@@ -92,7 +95,14 @@ public interface MonadFutEither<E> {
 			Future<Either<E, C>> fromC, 
 			Function3<A,B,C,Future<Either<E,T>>> f  ) {
 
-		return $_notYetImpl();
+		 Future<Either<E, Future<Either<E, T>>>> map3 = map3( 
+				fromA,
+				fromB,
+				fromC,
+				(a, b , c) -> f.apply(a, b, c)
+				);
+		 
+		 return flatten( map3 );
 
 	}
 
@@ -101,14 +111,49 @@ public interface MonadFutEither<E> {
 			Future<Either<E, C>> fromC, 
 			Function3<A,B,C,T> f  ) {
 
-		return $_notYetImpl();
+		return flatMap2(
+				fromA, 
+				fromB, 
+				( a, b ) -> map( fromC, c -> f.apply( a, b, c) )
+				);
 
 	}
 	
-	default <T> Future<Either<E, List<T>>> sequence( Future<Either<E, List<T>>> l ) {
+	default <T> Future<Either<E, List<T>>> sequence( List<Future<Either<E, T>>> l ) {
+		
 
-		return $_notYetImpl();
+		return sequence( ( new ArrayList<>(l) ).iterator() );
 
 	}
+	
+	default <T> Future<Either<E, List<T>>> sequence( Iterator<Future<Either<E, T>>> i ) {
+		
+		if ( ! i.hasNext() ) {
+			
+			return pure( new ArrayList<T>() );
+			
+		}
+		
+		return map2(				
+				i.next(),
+				sequence( i ),
+				(reg, list) -> {
+					
+					final List<T> newList = new ArrayList<>( );
+					
+					newList.add( reg );
+					
+					newList.addAll(list );
+					
+					return newList;
+				}
+				
+				
+		);
+		
+	}
+	
+	
+	
 	
 }

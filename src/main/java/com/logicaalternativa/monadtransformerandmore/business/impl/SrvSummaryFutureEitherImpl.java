@@ -63,10 +63,27 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 	@Override
 	public Future<Either<Error, Summary>> getSummary(Integer idBook) {
 		
+		final Future<Either<Error, Sales>> salesF = srvSales.getSales(idBook);		
+		
+		Future<Either<Error, Optional<Sales>>> salesOF = m.map(salesF, sales -> Optional.of(sales));
+		
 		return m.flatMap2(
 				srvBook.getBook(idBook), 
-				srvSales.getSales(idBook),				
-				( book, sales ) -> $_notYetImpl() 
+				salesOF,				
+				( book, salesO ) -> {
+						
+						final List<Future<Either<Error, Chapter>>> listFutCapter = book.getChapters()
+							.stream()
+							.map( chap -> srvChapter.getChapter(chap ) )
+							.collect(Collectors.toList());
+						
+						final Future<Either<Error, List<Chapter>>> chapterFut = m.sequence( listFutCapter );						
+						final Future<Either<Error, Author>> author = srvAuthor.getAuthor( book.getIdAuthor() );
+						
+						
+									
+						return $_notYetImpl();
+					} 
 				);
 		
 		
