@@ -1,9 +1,8 @@
 package com.logicaalternativa.monadtransformerandmore.monad;
 
-import static com.logicaalternativa.monadtransformerandmore.util.TDD.$_notYetImpl;
-
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -122,7 +121,7 @@ public interface MonadFutEither<E> {
 	default <T> Future<Either<E, List<T>>> sequence( List<Future<Either<E, T>>> l ) {
 		
 
-		return sequence( ( new ArrayList<>(l) ).iterator() );
+		return sequence( ( new LinkedList<>( l ) ).iterator() );
 
 	}
 	
@@ -130,7 +129,7 @@ public interface MonadFutEither<E> {
 		
 		if ( ! i.hasNext() ) {
 			
-			return pure( new ArrayList<T>() );
+			return pure( new LinkedList<>() );
 			
 		}
 		
@@ -139,11 +138,8 @@ public interface MonadFutEither<E> {
 				sequence( i ),
 				(reg, list) -> {
 					
-					final List<T> newList = new ArrayList<>( );
-					
-					newList.add( reg );
-					
-					newList.addAll(list );
+					final LinkedList<T> newList = ( LinkedList<T> ) list;
+					newList.addFirst( reg );
 					
 					return newList;
 				}
