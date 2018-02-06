@@ -27,6 +27,7 @@ import com.logicaalternativa.monadtransformerandmore.business.SrvSummaryFutureEi
 import com.logicaalternativa.monadtransformerandmore.errors.Error;
 import com.logicaalternativa.monadtransformerandmore.errors.impl.MyError;
 import com.logicaalternativa.monadtransformerandmore.monad.MonadFutEither;
+import static com.logicaalternativa.monadtransformerandmore.monad.MonadFutEitherWrapper.wrap;
 import com.logicaalternativa.monadtransformerandmore.service.future.ServiceAuthorFutEither;
 import com.logicaalternativa.monadtransformerandmore.service.future.ServiceBookFutEither;
 import com.logicaalternativa.monadtransformerandmore.service.future.ServiceChapterFutEither;
@@ -57,17 +58,29 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 		this.srvSales = srvSales;
 		this.srvChapter = srvChapter;
 		this.srvAuthor = srvAuthor;
-		this.m= m;
+		this.m = m;
 	}
 
 	@Override
 	public Future<Either<Error, Summary>> getSummary(Integer idBook) {
 		
-		final Future<Either<Error, Sales>> salesF = srvSales.getSales(idBook);		
+//		final Future<Either<Error, Optional<Sales>>> salesOF = m.recover(
+//				m.map( 
+//					srvSales.getSales(idBook), 
+//					sales -> Optional.of(sales) 
+//				), 
+//				e  -> Optional.empty() );
 		
-		Future<Either<Error, Optional<Sales>>> salesOF = m.map(salesF, sales -> Optional.of(sales));
+//		final Future<Either<Error, Sales>> salesF = srvSales.getSales(idBook);		
+//		final Future<Either<Error, Optional<Sales>>> salesOFF = m.map(salesF, sales -> Optional.of(sales));
+//		final Future<Either<Error, Optional<Sales>>> salesOF = m.recover(salesOFF, e -> Optional.empty());
 		
-		return m.flatMap2(
+		final Future<Either<Error, Optional<Sales>>> salesOF =  wrap( srvSales.getSales(idBook), m)
+				.map( sales -> Optional.of(sales) )
+				.recover( e -> Optional.empty() )
+				.value();
+		
+		final Future<Either<Error, Summary>> res = m.flatMap2(
 				srvBook.getBook(idBook), 
 				salesOF,				
 				( book, salesO ) -> {
@@ -77,17 +90,17 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 							.map( chap -> srvChapter.getChapter(chap ) )
 							.collect(Collectors.toList());
 						
-						final Future<Either<Error, List<Chapter>>> chapterFut = m.sequence( listFutCapter );						
-						final Future<Either<Error, Author>> author = srvAuthor.getAuthor( book.getIdAuthor() );
-						
-						
-									
-						return $_notYetImpl();
+						return m.map2(
+								m.sequence( listFutCapter ), 
+								srvAuthor.getAuthor( book.getIdAuthor() ), 
+								(chapter, author) -> new Summary(book, chapter, salesO, author)
+								);
 					} 
 				);
 		
+		return m.recoverWith(res, error -> m.raiseError(new MyError("It is impossible to get book summary") ) );
 		
-		// return $_notYetImpl();
+		
 
 		
 	}

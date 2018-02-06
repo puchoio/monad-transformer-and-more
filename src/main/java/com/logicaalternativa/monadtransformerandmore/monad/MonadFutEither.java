@@ -139,8 +139,7 @@ public interface MonadFutEither<E> {
 				(reg, list) -> {
 					
 					final LinkedList<T> newList = ( LinkedList<T> ) list;
-					newList.addFirst( reg );
-					
+					newList.addFirst( reg );					
 					return newList;
 				}
 				
