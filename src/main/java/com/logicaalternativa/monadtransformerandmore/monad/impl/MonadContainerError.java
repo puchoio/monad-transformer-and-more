@@ -7,13 +7,14 @@ import java.util.function.Function;
 import com.logicaalternativa.monadtransformerandmore.container.Container;
 import com.logicaalternativa.monadtransformerandmore.monad.MonadContainer;
 import com.logicaalternativa.monadtransformerandmore.errors.Error;
+import com.logicaalternativa.monadtransformerandmore.errors.impl.MyError;
 
 public class MonadContainerError implements MonadContainer<Error> {
 
 	@Override
 	public <T> Container<Error, T> pure(T value) {
 		
-		return $_notYetImpl();
+		return Container.value( value );
 			
 	}
 
@@ -21,13 +22,31 @@ public class MonadContainerError implements MonadContainer<Error> {
 	public <A, T> Container<Error, T> flatMap(Container<Error, A> from,
 			Function<A, Container<Error, T>> f) {
 		
-		return $_notYetImpl();
+		
+		if( from.isOk() ) {
+			
+			try {
+			 
+				return f.apply(  from.getValue() );
+				
+			} catch( Throwable t  ) {
+				
+				return raiseError( new MyError(t.getMessage())  );
+				
+			}
+			
+			
+			
+		} else {
+			
+			return raiseError( from.getError() );
+		}
 	}
 
 	@Override
 	public <T> Container<Error, T> raiseError(Error error) {
 		
-		return $_notYetImpl();
+		return Container.error( error );
 		
 	}
 

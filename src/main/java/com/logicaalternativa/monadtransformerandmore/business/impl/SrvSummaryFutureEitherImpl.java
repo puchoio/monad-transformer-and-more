@@ -27,7 +27,10 @@ import com.logicaalternativa.monadtransformerandmore.business.SrvSummaryFutureEi
 import com.logicaalternativa.monadtransformerandmore.errors.Error;
 import com.logicaalternativa.monadtransformerandmore.errors.impl.MyError;
 import com.logicaalternativa.monadtransformerandmore.monad.MonadFutEither;
+import com.logicaalternativa.monadtransformerandmore.monad.MonadFutEitherWrapper;
+
 import static com.logicaalternativa.monadtransformerandmore.monad.MonadFutEitherWrapper.wrap;
+
 import com.logicaalternativa.monadtransformerandmore.service.future.ServiceAuthorFutEither;
 import com.logicaalternativa.monadtransformerandmore.service.future.ServiceBookFutEither;
 import com.logicaalternativa.monadtransformerandmore.service.future.ServiceChapterFutEither;
@@ -75,37 +78,32 @@ public class SrvSummaryFutureEitherImpl implements SrvSummaryFutureEither<Error>
 //		final Future<Either<Error, Optional<Sales>>> salesOFF = m.map(salesF, sales -> Optional.of(sales));
 //		final Future<Either<Error, Optional<Sales>>> salesOF = m.recover(salesOFF, e -> Optional.empty());
 		
-		final Future<Either<Error, Optional<Sales>>> salesOF =  wrap( srvSales.getSales(idBook), m)
-				.map( sales -> Optional.of(sales) )
-				.recover( e -> Optional.empty() )
-				.value();
+		
 		
 		final Future<Either<Error, Summary>> res = m.flatMap2(
 				srvBook.getBook(idBook), 
-				salesOF,				
-				( book, salesO ) -> {
-						
-						final List<Future<Either<Error, Chapter>>> listFutCapter = book.getChapters()
-							.stream()
-							.map( chap -> srvChapter.getChapter(chap ) )
-							.collect(Collectors.toList());
-						
-						return m.map2(
-								m.sequence( listFutCapter ), 
+				wrap( srvSales.getSales(idBook), m)
+						.map( sales -> Optional.of(sales) )
+						.recover( e -> Optional.empty() )
+						.value(),				
+				( book, salesO ) ->  m.map2(
+								m.sequence( getListChapters(book) ), 
 								srvAuthor.getAuthor( book.getIdAuthor() ), 
 								(chapter, author) -> new Summary(book, chapter, salesO, author)
-								);
-					} 
-				);
+								) 
+			);
 		
-		return m.recoverWith(res, error -> m.raiseError(new MyError("It is impossible to get book summary") ) );
-		
-		
-
-		
+		return m.recoverWith(res, error -> m.raiseError( new MyError("It is impossible to get book summary") ) );
+			
 	}
-	
-	
+
+	private List<Future<Either<Error, Chapter>>> getListChapters(Book book) {
+		final List<Future<Either<Error, Chapter>>> listFutCapter = book.getChapters()
+			.stream()
+			.map( chap -> srvChapter.getChapter(chap ) )
+			.collect(Collectors.toList());
+		return listFutCapter;
+	}	
 
 	
 }
