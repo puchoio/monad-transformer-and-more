@@ -3,6 +3,12 @@ package com.logicaalternativa.monadtransformerandmore.container;
 
 public final class Container<E,T> {
 	
+	@Override
+	public String toString() {
+		return "Container [value=" + value + ", ok=" + ok + ", error=" + error
+				+ "]";
+	}
+
 	final T value;
 	
 	final Boolean ok;

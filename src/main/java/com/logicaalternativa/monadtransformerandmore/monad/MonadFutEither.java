@@ -17,6 +17,8 @@ public interface MonadFutEither<E> {
 	/**
 	 * Primitives It has to code in the implementation
 	 */
+	
+	// P[T]
 
 	<T> Future<Either<E,T>> pure( T value );
 	

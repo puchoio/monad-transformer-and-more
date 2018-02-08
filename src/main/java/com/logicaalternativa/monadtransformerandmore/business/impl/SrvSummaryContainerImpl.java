@@ -1,24 +1,23 @@
 package com.logicaalternativa.monadtransformerandmore.business.impl;
 
-import static com.logicaalternativa.monadtransformerandmore.util.TDD.$_notYetImpl;
+import static com.logicaalternativa.monadtransformerandmore.monad.MonadContainerWrapper.wrap;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import com.logicaalternativa.monadtransformerandmore.bean.Author;
 import com.logicaalternativa.monadtransformerandmore.bean.Book;
 import com.logicaalternativa.monadtransformerandmore.bean.Chapter;
-import com.logicaalternativa.monadtransformerandmore.bean.Sales;
 import com.logicaalternativa.monadtransformerandmore.bean.Summary;
 import com.logicaalternativa.monadtransformerandmore.business.SrvSummaryContainer;
 import com.logicaalternativa.monadtransformerandmore.container.Container;
+import com.logicaalternativa.monadtransformerandmore.errors.Error;
+import com.logicaalternativa.monadtransformerandmore.errors.impl.MyError;
 import com.logicaalternativa.monadtransformerandmore.monad.MonadContainer;
 import com.logicaalternativa.monadtransformerandmore.service.container.ServiceAuthorContainer;
 import com.logicaalternativa.monadtransformerandmore.service.container.ServiceBookContainer;
 import com.logicaalternativa.monadtransformerandmore.service.container.ServiceChapterContainer;
 import com.logicaalternativa.monadtransformerandmore.service.container.ServiceSalesContainer;
-import com.logicaalternativa.monadtransformerandmore.errors.Error;
 
 public class SrvSummaryContainerImpl implements SrvSummaryContainer<Error> {
 	
@@ -47,31 +46,31 @@ public class SrvSummaryContainerImpl implements SrvSummaryContainer<Error> {
 	@Override
 	public Container<Error, Summary> getSummary(Integer idBook) {
 		
-		Book book = srvBook.getBook(idBook).getValue();
+		final Container<Error, Summary> res = m.flatMap2(
+				srvBook.getBook(idBook), 
+				wrap( srvSales.getSales(idBook), m)
+					.map( sales -> Optional.of(sales) )
+					.recover( e -> Optional.empty() )
+					.value(),				
+				( book, salesO ) -> m.map2(
+										m.sequence( getListChapters(book) ), 
+										srvAuthor.getAuthor( book.getIdAuthor() ), 
+										(chapter, author) -> new Summary(book, chapter, salesO, author)
+									)
+			);
 		
-		Sales sales = srvSales.getSales(idBook).getValue();
+		return m.recoverWith(res, error -> m.raiseError( new MyError("It is impossible to get book summary") ) );
+			
+	}
+
+	private List<Container<Error, Chapter>> getListChapters(Book book) {
 		
-	    Author author = srvAuthor.getAuthor(book.getIdAuthor()).getValue();
-	    
-	    List<Long> chapters2 = book.getChapters();
-	    
-		final List<Chapter> chapters = chapters2
-	     .stream()
-	     .parallel()
-	     .map(  idChapter -> {
-	    	 
-	    	 Container<Error, Chapter> chapter = srvChapter.getChapter(idChapter);
-	    	 return chapter.getValue();
-	    	 
-	     })
-	     .collect(Collectors.toList())
-	     ;	    
-	    
-	     Summary summary = new Summary(book, chapters, Optional.of(sales), author);
-	     
-	    
-	    return Container.value(summary); 
+		final List<Container<Error, Chapter>> listFutCapter = book.getChapters()
+			.stream()
+			.map( chap -> srvChapter.getChapter(chap ) )
+			.collect(Collectors.toList());
 		
+		return listFutCapter;
 	}
 
 }

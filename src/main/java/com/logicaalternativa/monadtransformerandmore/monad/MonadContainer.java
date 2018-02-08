@@ -2,9 +2,13 @@ package com.logicaalternativa.monadtransformerandmore.monad;
 import static com.logicaalternativa.monadtransformerandmore.util.TDD.$_notYetImpl;
 
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import scala.concurrent.Future;
+import scala.util.Either;
 
 import com.logicaalternativa.monadtransformerandmore.container.Container;
 import com.logicaalternativa.monadtransformerandmore.function.Function3;
@@ -30,20 +34,20 @@ public interface MonadContainer<E> {
 
 	default <A,T> Container<E, T> map( Container<E, A> from, Function<A, T> f ) {
 
-		return $_notYetImpl();
+		return flatMap( from, s ->  pure( f.apply(s ) ) );
 
 	}
 
 	default <T> Container<E, T> recover( Container<E, T> from, Function<E, T> f ) {
 
-		return $_notYetImpl();
+		return recoverWith(from, error -> pure( f.apply (error) ) );
 
 	}
 
 
 	default <T> Container<E, T> flatten( Container<E, Container<E, T>> from ) {
 
-		return $_notYetImpl();
+		return flatMap( from,  s -> s  );
 
 	}
 
@@ -51,8 +55,14 @@ public interface MonadContainer<E> {
 			Container<E, B> fromB, 
 			BiFunction<A,B,Container<E, T>> f  ) {
 
-		return $_notYetImpl();
+		return  flatMap(fromA, 
+				 a -> flatMap(
+						 fromB, 
+						 	b -> f.apply(a, b)
+						 )				
+				);
 
+		
 	}
 
 
@@ -61,8 +71,13 @@ public interface MonadContainer<E> {
 			Container<E, B> fromB, 
 			BiFunction<A,B,T> f  ) {
 
-		return $_notYetImpl();
-
+		return flatMap(
+				fromA,
+				a -> map( 
+					 fromB,
+					   b ->  f.apply( a, b )  
+				)
+			 );
 	}
 
 
@@ -70,8 +85,17 @@ public interface MonadContainer<E> {
 			Container<E, B> fromB, 
 			Container<E, C> fromC, 
 			Function3<A,B,C,Container<E, T>> f  ) {
-
-		return $_notYetImpl();
+		
+		 
+		return flatten(  map3( 
+					fromA,
+					fromB,
+					fromC,
+					(a, b , c) -> f.apply(a, b, c)
+					)
+				);
+		 
+		
 
 	}
 
@@ -80,19 +104,41 @@ public interface MonadContainer<E> {
 			Container<E, C> fromC, 
 			Function3<A,B,C,T> f  ) {
 
-		return $_notYetImpl();
+		return flatMap2(
+				fromA, 
+				fromB, 
+				( a, b ) -> map( fromC, c -> f.apply( a, b, c) )
+				);
+
 
 	}
 	
-	default <T> Container<E, List<T>> sequence( List<Container<E, List<T>>> l ) {
+	default <T> Container<E, List<T>> sequence( List<Container<E, T>> l ) {
 
-		return $_notYetImpl();
+		return sequence( ( new LinkedList<>( l ) ).iterator() );
 
 	}
 	
-	default <T> Container<E, List<T>> sequence( Iterator<Container<E, List<T>>> i ) {
+	default <T> Container<E, List<T>> sequence( Iterator<Container<E, T>> i ) {
 
-		return $_notYetImpl();
+		if ( ! i.hasNext() ) {
+			
+			return pure( new LinkedList<>() );
+			
+		}
+		
+		return map2(				
+				i.next(),
+				sequence( i ),
+				(reg, list) -> {
+					
+					final LinkedList<T> newList = ( LinkedList<T> ) list;
+					newList.addFirst( reg );					
+					return newList;
+				}
+				
+				
+		);
 
 	}
 	

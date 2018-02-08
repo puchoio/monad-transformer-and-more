@@ -1,13 +1,11 @@
 package com.logicaalternativa.monadtransformerandmore.monad.impl;
 
-import static com.logicaalternativa.monadtransformerandmore.util.TDD.$_notYetImpl;
-
 import java.util.function.Function;
 
 import com.logicaalternativa.monadtransformerandmore.container.Container;
-import com.logicaalternativa.monadtransformerandmore.monad.MonadContainer;
 import com.logicaalternativa.monadtransformerandmore.errors.Error;
 import com.logicaalternativa.monadtransformerandmore.errors.impl.MyError;
+import com.logicaalternativa.monadtransformerandmore.monad.MonadContainer;
 
 public class MonadContainerError implements MonadContainer<Error> {
 
@@ -23,15 +21,17 @@ public class MonadContainerError implements MonadContainer<Error> {
 			Function<A, Container<Error, T>> f) {
 		
 		
+		Container<Error, T> cont = null;
+		
 		if( from.isOk() ) {
 			
 			try {
 			 
-				return f.apply(  from.getValue() );
+				cont = f.apply(  from.getValue() );
 				
 			} catch( Throwable t  ) {
 				
-				return raiseError( new MyError(t.getMessage())  );
+				cont = raiseError( new MyError(t.getMessage())  );
 				
 			}
 			
@@ -39,8 +39,10 @@ public class MonadContainerError implements MonadContainer<Error> {
 			
 		} else {
 			
-			return raiseError( from.getError() );
+			cont = raiseError( from.getError() );
 		}
+		
+		return cont;
 	}
 
 	@Override
@@ -54,7 +56,28 @@ public class MonadContainerError implements MonadContainer<Error> {
 	public <T> Container<Error, T> recoverWith(Container<Error, T> from,
 			Function<Error, Container<Error, T>> f) {
 		
-		return $_notYetImpl();
+		Container<Error, T> cont = null;
+		
+		if( ! from.isOk() ) {
+			
+			try {
+			 
+				cont = f.apply(  from.getError() );
+				
+			} catch( Throwable t  ) {
+				
+				cont = raiseError( new MyError(t.getMessage())  );
+				
+			}
+			
+			
+			
+		} else {
+			
+			cont = pure( from.getValue() );
+		}
+		
+		return cont;
 		
 	}
 
