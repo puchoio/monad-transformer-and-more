@@ -121,7 +121,6 @@ public interface MonadFutEither<E> {
 	}
 	
 	default <T> Future<Either<E, List<T>>> sequence( List<Future<Either<E, T>>> l ) {
-		
 
 		return sequence( ( new LinkedList<>( l ) ).iterator() );
 

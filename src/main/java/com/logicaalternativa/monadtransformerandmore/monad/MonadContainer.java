@@ -1,14 +1,9 @@
 package com.logicaalternativa.monadtransformerandmore.monad;
-import static com.logicaalternativa.monadtransformerandmore.util.TDD.$_notYetImpl;
-
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
-import scala.concurrent.Future;
-import scala.util.Either;
 
 import com.logicaalternativa.monadtransformerandmore.container.Container;
 import com.logicaalternativa.monadtransformerandmore.function.Function3;
@@ -114,6 +109,7 @@ public interface MonadContainer<E> {
 	}
 	
 	default <T> Container<E, List<T>> sequence( List<Container<E, T>> l ) {
+
 
 		return sequence( ( new LinkedList<>( l ) ).iterator() );
 
