@@ -6,57 +6,42 @@ import com.logicaalternativa.monadtransformerandmore.function.{Function3 => JFun
 import java.util.function.{Function => JFunction, BiFunction => JFunction2}
 import java.util.{List => JList}
 
+import collection.JavaConverters._
+
 object Implicits {  
   
   class WrapperMonad[E,P[_],A]( val value : P[A], private val E : Monad[E,P] ) {
 
-    def flatMap[T]( from : A => P[T] ) : P[T] = {
+    def flatMap[T]( f : A => P[T] ) : P[T] = {
       
-      E.flatMap( value, from )
+      E.flatMap( value, f )
         
     } 
     
-    def map[T]( from : A => T ) : P[T] = {
+    def map[T]( f : A => T ) : P[T] = {
       
-      E.map( value, from )
+      E.map( value, f )
         
     } 
     
-  }
-    
-  implicit def funToScala[A,T](  f :  Function[A,T] ) : JFunction[A,T]  = {
-    
-    new JFunction[A,T] {
+    def recover( f : E => A ) : P[A] = { 
       
-        def apply( s : A ) = f( s )
-        
-    }
-         
-  }
-  
-  implicit def fun2ToScala[A,B,T](  f :  Function2[A,B,T] ) : JFunction2[A,B,T]  = {
-    
-    new JFunction2[A,B,T] {
+      E.recover( value, f )
       
-        def apply( a : A, b : B ) = f( a, b )
-        
     }
-         
-  }  
-  
-  
-  implicit def fun3ToScala[A,B,C,T](  f :  Function3[A,B,C,T] ) : JFunction3[A,B,C,T]  = {
-    
-    new JFunction3[A,B,C,T] {
+
+    def recoverWith( f : E => P[A]) : P[A] = { 
       
-        def apply( a : A, b : B, c: C) = f( a, b, c )
-        
+      E.recoverWith( value, f )
+      
     }
-         
-  }
+    
+  } 
+  
   
   implicit def toWrapMonad[E,T,P[_]]( s : P[T]  )( implicit E : Monad[E,P] ) = new WrapperMonad( s, E ) 
   
   implicit def unWrapMonad[E,T,P[_]]( s : WrapperMonad[E,P,T]  ) : P[T] = s.value
+  
   
 }
