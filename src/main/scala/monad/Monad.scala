@@ -18,20 +18,94 @@ trait Monad[E, P[_]] {
    * Derived
    */
   
-  def map[A,T]( from : P[A], f : (A) => T ) : P[T] = ???
+  def map[A,T]( from : P[A], f : (A) => T ) : P[T] = {
+    
+     // val ff : (A) => P[T] = a => pure( f(a) ) 
+     // val ff : Function[A,P[T]] = a => pure( f(a) ) 
+     val ff =  f andThen pure
+     flatMap( from, ff )
   
-  def recover[T]( from : P[T], f : (E) => T ) : P[T] = ???
+  }
+  
+  def recover[T]( from : P[T], f : (E) => T ) : P[T] = {
+    
+    val ff =  f andThen pure
+    recoverWith( from, ff )
+    
+  }
 
-  def flatten[T]( from : P[P[T]] ) : P[T] = ???
+  def flatten[T]( from : P[P[T]] ) : P[T] = {
+    
+    
+    flatMap( from, ( t : P[T] ) => t )
+    
+  }
 
-  def flatMap2[A,B,T]( fromA : P[A], fromB :P[B], f : (A,B) => P[T] ) : P[T] = ???
+  def flatMap2[A,B,T]( fromA : P[A], fromB :P[B], f : (A,B) => P[T] ) : P[T] = {
+    
+    flatten {
+      map2(
+        fromA,
+        fromB,
+        (a :A , b: B ) =>  f(a, b) // f(a, b): P[T] 
+      ) // P[P[T]]
+    }
+  }
   
-  def map2[A,B,T]( fromA : P[A], fromB : P[B], f : (A,B) => T ) : P[T] = ???
+  def map2[A,B,T]( fromA : P[A], fromB : P[B], f : (A,B) => T ) : P[T] = {
+    
+      flatMap(
+        fromA,
+        (a : A) => map(
+                    fromB,
+                    ( b: B ) => f(a, b)        
+                  ) 
+      )
+    
+  }
   
-  def flatMap3[A,B,C,T]( fromA : P[A], fromB : P[B], fromC :P[C], f : (A,B,C) => P[T] ) : P[T] = ???
+  def flatMap3[A,B,C,T]( fromA : P[A], fromB : P[B], fromC :P[C], f : (A,B,C) => P[T] ) : P[T] = {
+
+      flatMap2(
+        fromA,
+        fromB,
+        (a :A , b : B) => flatMap(
+                            fromC,
+                            ( c : C ) => f(a, b , c )
+                          )
+      )
+    
+  }
   
-  def map3[A,B,C,T]( fromA : P[A], fromB :P[B], fromC :P[C], f : (A,B,C) => T ) : P[T] = ???
+  def map3[A,B,C,T]( fromA : P[A], fromB :P[B], fromC :P[C], f : (A,B,C) => T ) : P[T] = {
+      
+    flatMap3(
+      fromA,
+      fromB,
+      fromC,
+      (a :A , b :B , c:C) => pure( f(a, b , c) ) 
+    )
+    
+  }
   
-  def sequence[T]( l : List[P[T]]  ) : P[List[T]] =  ???
+  def sequence[T]( l : List[P[T]]  ) : P[List[T]] =  {
+    
+    l match {
+      
+        case Nil => pure( List() )
+        case head :: tail => {
+            map2(
+              head,
+              sequence( tail ),
+              (h : T, l : List[T]) => h +:l
+            )
+          
+        }
+      
+    }
+    
+    
+    
+  }
   
 }
