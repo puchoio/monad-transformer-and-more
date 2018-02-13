@@ -97,14 +97,12 @@ trait Monad[E, P[_]] {
             map2(
               head,
               sequence( tail ),
-              (h : T, l : List[T]) => h +:l
+              (h : T, l : List[T]) => h +: l
             )
           
         }
       
     }
-    
-    
     
   }
   
