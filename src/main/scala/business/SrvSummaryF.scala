@@ -22,7 +22,13 @@ trait SrvSummaryF[E,P[_]] {
   
   def getSummary( idBook: Int) : P[Summary] = {
     
-     ???
+    for {
+    
+        book <- srvBook.getBook( idBook ) // book = srvBook.getBook( idBook ) 
+      
+      
+    } yield( ??? )
+    
     
   } 
   

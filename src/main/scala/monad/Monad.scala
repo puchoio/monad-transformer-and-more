@@ -36,7 +36,6 @@ trait Monad[E, P[_]] {
 
   def flatten[T]( from : P[P[T]] ) : P[T] = {
     
-    
     flatMap( from, ( t : P[T] ) => t )
     
   }
