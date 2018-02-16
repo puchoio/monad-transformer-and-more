@@ -7,7 +7,11 @@ import service._
 
 import monad.syntax.Implicits._
 
+import collection.JavaConverters._
+
 import java.util.Optional
+
+case class AuthorChapter( author: Author, listChapter : List[Chapter] )
 
 trait SrvSummaryF[E,P[_]] {
   
@@ -23,14 +27,30 @@ trait SrvSummaryF[E,P[_]] {
   def getSummary( idBook: Int) : P[Summary] = {
     
     for {
-    
-        book <- srvBook.getBook( idBook ) // book = srvBook.getBook( idBook ) 
-      
-      
-    } yield( ??? )
+        
+        book <- srvBook getBook idBook        
+        sales <- srvSales getSales( idBook )
+        authorChapter <- getAuthorChapter( book )
+        
+    } yield( new Summary( book, authorChapter.listChapter.asJava, Optional.of( sales ), authorChapter.author) )
     
     
   } 
+  
+  def getAuthorChapter( book: Book ) : P[AuthorChapter] = {
+  
+      for {
+        
+        author <- srvAuthor.getAuthor( book.getIdAuthor )
+        listChapter <- getListChapter( book.getChapters.asScala.toList )
+        
+      } yield( AuthorChapter(author, listChapter ) ) 
+    
+    
+  }
+  
+  def getListChapter( chapters : List[java.lang.Long] ) : P[List[Chapter]] = ???
+  
   
   protected[SrvSummaryF] def getGenericError( s : String ) : E
   
